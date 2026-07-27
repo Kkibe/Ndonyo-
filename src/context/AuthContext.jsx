@@ -6,10 +6,9 @@ import React, {
   useCallback,
   useRef,
 } from 'react';
-import { auth } from '../config/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { supabase } from '../config/supabase';
+import { userService } from '../services/marketplace.service';
+import { sendLoginAlertEmail } from '../services/email.service';
 
 const AuthContext = createContext(null);
 
@@ -24,137 +23,92 @@ export const AuthProvider = ({ children }) => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isPremium, setIsPremium] = useState(false);
-  const unsubscribeRef = useRef(null);
+  const loginAlertSentRef = useRef(false);
 
-  // Check if user is admin
-  const checkAdminStatus = useCallback((email) => {
-    return (
-      email === 'kkibetkkoir@gmail.com' || email === 'kkibetkkorir@gmail.com'
-    );
+  const fetchUserData = useCallback(async (user) => {
+    if (!user) {
+      setUserData(null);
+      return;
+    }
+    const data = await userService.getUser(user.id);
+    setUserData(data);
+    setIsAdmin(data?.is_admin === true);
   }, []);
 
-  // Check if subscription is still valid
-  const checkSubscriptionValidity = useCallback((userData) => {
-    if (!userData?.isPremium || !userData?.subDate || !userData?.subscription) {
-      return false;
-    }
-
-    const currentTime = new Date();
-    const subDate = new Date(userData.subDate);
-    const timeDiff = currentTime - subDate;
-    const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
-
-    switch (userData.subscription) {
-      case 'Daily':
-        return daysDiff <= 1;
-      case 'Weekly':
-        return daysDiff <= 7;
-      case 'Monthly':
-        return daysDiff <= 30;
-      case 'Yearly':
-        return daysDiff <= 365;
-      default:
-        return false;
-    }
-  }, []);
-
-  // Real-time user data listener
-  const subscribeToUserData = useCallback(
-    (email) => {
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-      }
-
-      const userDocRef = doc(db, 'users', email);
-      const unsubscribe = onSnapshot(
-        userDocRef,
-        (doc) => {
-          if (doc.exists()) {
-            const data = { id: doc.id, ...doc.data() };
-
-            // Check subscription validity
-            const isValidSubscription = checkSubscriptionValidity(data);
-
-            // Auto-update if subscription expired
-            if (data.isPremium && !isValidSubscription) {
-              // Subscription expired - trigger update
-              import('../services/marketplace.service').then(
-                ({ userService }) => {
-                  userService.updateUser(email, {
-                    isPremium: false,
-                    subscription: null,
-                    subDate: null,
-                  });
-                }
-              );
-              data.isPremium = false;
-              data.subscription = null;
-              data.subDate = null;
-            }
-
-            setUserData(data);
-            setIsPremium(data.isPremium && isValidSubscription);
-            setIsAdmin(checkAdminStatus(email));
-          }
-        },
-        (error) => {
-          console.error('Error listening to user data:', error);
-        }
-      );
-
-      unsubscribeRef.current = unsubscribe;
-    },
-    [checkAdminStatus, checkSubscriptionValidity]
-  );
-
-  // Listen to auth state changes
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
+    let isMounted = true;
 
-      if (user) {
-        subscribeToUserData(user.email);
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
+      setCurrentUser(session?.user ?? null);
+      if (session?.user) {
+        fetchUserData(session.user);
       } else {
-        // Clean up listener on logout
-        if (unsubscribeRef.current) {
-          unsubscribeRef.current();
-          unsubscribeRef.current = null;
-        }
-        setUserData(null);
-        setIsPremium(false);
-        setIsAdmin(false);
+        setLoading(false);
       }
-
-      setLoading(false);
     });
 
-    return () => {
-      unsubscribeAuth();
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-      }
-    };
-  }, [subscribeToUserData]);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (!isMounted) return;
+        const user = session?.user ?? null;
+        setCurrentUser(user);
 
-  // Manual refresh function
+        if (user) {
+          (async () => {
+            await fetchUserData(user);
+
+            // Send login alert on SIGNED_IN events (not token refreshes)
+            if (event === 'SIGNED_IN' && !loginAlertSentRef.current) {
+              loginAlertSentRef.current = true;
+              try {
+                const profile = await userService.getUser(user.id);
+                if (profile) {
+                  sendLoginAlertEmail(profile);
+                }
+              } catch (e) {
+                console.error('Login alert failed:', e);
+              }
+            }
+            setLoading(false);
+          })();
+        } else {
+          loginAlertSentRef.current = false;
+          setUserData(null);
+          setIsAdmin(false);
+          setLoading(false);
+        }
+      }
+    );
+
+    return () => {
+      isMounted = false;
+      subscription?.unsubscribe();
+    };
+  }, [fetchUserData]);
+
   const refreshUserData = useCallback(async () => {
-    if (currentUser?.email) {
-      const { userService } = await import('../services/marketplace.service');
-      const data = await userService.getUser(currentUser.email);
-      setUserData(data);
-      setIsPremium(data?.isPremium && checkSubscriptionValidity(data));
-      setIsAdmin(checkAdminStatus(currentUser.email));
+    if (currentUser) {
+      await fetchUserData(currentUser);
     }
-  }, [currentUser, checkAdminStatus, checkSubscriptionValidity]);
+  }, [currentUser, fetchUserData]);
+
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
+    setCurrentUser(null);
+    setUserData(null);
+    setIsAdmin(false);
+    loginAlertSentRef.current = false;
+  }, []);
 
   const value = {
     currentUser,
     userData,
     loading,
     isAdmin,
-    isPremium,
     refreshUserData,
+    logout,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

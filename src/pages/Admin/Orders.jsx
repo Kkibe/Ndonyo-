@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { orderService } from '../../services/order.service';
+import { orderService } from '../../services/marketplace.service';
 import { Navigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import './Orders.scss';
@@ -39,6 +39,11 @@ export default function Orders() {
 
   const statusColors = { pending: '#ff9800', processing: '#2196f3', shipped: '#9c27b0', delivered: '#4caf50', cancelled: '#f44336' };
   const filteredOrders = orders.filter(o => filter === 'all' ? true : o.status === filter);
+  const searchedOrders = filteredOrders.filter(o => {
+    if (!searchTerm) return true;
+    const t = searchTerm.toLowerCase();
+    return o.id?.toLowerCase().includes(t) || o.shipping_details?.fullName?.toLowerCase().includes(t);
+  });
 
   if (loading) return <div className="loader">Loading...</div>;
   if (!isAdmin) return <Navigate to="/" replace />;
@@ -64,16 +69,16 @@ export default function Orders() {
         <table className="orders-table">
           <thead><tr><th>Order ID</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
           <tbody>
-            {filteredOrders.map(order => (
-              <tr key={order.orderId}>
-                <td>#{order.orderId?.slice(-8)}</td>
-                <td>{order.shippingDetails?.fullName || order.userId}</td>
+            {searchedOrders.map(order => (
+              <tr key={order.id}>
+                <td>#{order.id?.slice(-8).toUpperCase()}</td>
+                <td>{order.shipping_details?.fullName || 'N/A'}</td>
                 <td>{order.items?.length || 0} items</td>
-                <td>KSH {order.total?.toLocaleString()}</td>
+                <td>KSH {Number(order.total).toLocaleString()}</td>
                 <td><span className="status-badge" style={{ background: statusColors[order.status] }}>{order.status}</span></td>
-                <td>{new Date(order.createdAt?.toDate()).toLocaleDateString()}</td>
+                <td>{new Date(order.created_at).toLocaleDateString()}</td>
                 <td>
-                  <select onChange={(e) => updateStatus(order.orderId, e.target.value)} value={order.status}>
+                  <select onChange={(e) => updateStatus(order.id, e.target.value)} value={order.status}>
                     <option value="pending">Pending</option>
                     <option value="processing">Processing</option>
                     <option value="shipped">Shipped</option>

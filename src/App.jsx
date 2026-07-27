@@ -2,14 +2,6 @@ import React, { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { HelmetProvider } from 'react-helmet-async';
-import Marketplace from './pages/Marketplace/Marketplace';
-import Cart from './pages/Cart/Cart';
-
-// Add these imports
-import AdminDashboard from './pages/Admin/AdminDashboard';
-import OrdersManagement from './pages/Admin/OrdersManagement';
-import ProductsManagement from './pages/Admin/ProductsManagement';
-
 
 // Lazy load components for code splitting
 const Topbar = lazy(() => import('./components/Topbar/Topbar'));
@@ -17,18 +9,21 @@ const Navbar = lazy(() => import('./components/Navbar/Navbar'));
 const Footer = lazy(() => import('./components/Footer/Footer'));
 const Loader = lazy(() => import('./components/Loader/Loader'));
 const Home = lazy(() => import('./pages/Home/Home'));
+const Marketplace = lazy(() => import('./pages/Marketplace/Marketplace'));
+const ProductDetail = lazy(() => import('./pages/ProductDetail/ProductDetail'));
+const Cart = lazy(() => import('./pages/Cart/Cart'));
+const Checkout = lazy(() => import('./pages/Checkout/Checkout'));
 const Login = lazy(() => import('./pages/Login/Login'));
 const Register = lazy(() => import('./pages/Register/Register'));
-const Tips = lazy(() => import('./pages/Tips/Tips'));
-const Payments = lazy(() => import('./pages/Payments/Payments'));
-const UserProfile = lazy(() => import('./pages/UserProfile/UserProfile'));
-const ListUsers = lazy(() => import('./pages/Admin/ListUsers'));
-const EditUser = lazy(() => import('./pages/Admin/EditUser'));
-const AdminTips = lazy(() => import('./pages/Admin/AdminTips'));
-const EditTip = lazy(() => import('./pages/Admin/EditTip'));
 const About = lazy(() => import('./pages/About/About'));
+const UserProfile = lazy(() => import('./pages/UserProfile/UserProfile'));
+const OrderConfirmation = lazy(() => import('./pages/OrderConfirmation/OrderConfirmation'));
 const NotFound = lazy(() => import('./pages/NotFound/NotFound'));
 
+// Admin
+const AdminDashboard = lazy(() => import('./pages/Admin/AdminDashboard'));
+const ListUsers = lazy(() => import('./pages/Admin/ListUsers'));
+const EditUser = lazy(() => import('./pages/Admin/EditUser'));
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const { currentUser, isAdmin, loading } = useAuth();
@@ -40,7 +35,6 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
 
 function App() {
   useEffect(() => {
-    // Register service worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker
@@ -64,23 +58,38 @@ function App() {
           <main>
             <Routes>
               {/* Public Routes */}
-              <Route path="/" element={<Home/>} />
+              <Route path="/" element={<Home />} />
               <Route path="/marketplace" element={<Marketplace />} />
+              <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/about" element={<About />} />
 
-              {/* Protected Routes (Authenticated Users) */}
+              {/* Protected Routes */}
               <Route
-                path="/pay"
+                path="/cart"
                 element={
                   <ProtectedRoute>
-                    <Payments />
+                    <Cart />
                   </ProtectedRoute>
                 }
               />
-
-              {/* User Profile - View own profile or view by email */}
+              <Route
+                path="/checkout"
+                element={
+                  <ProtectedRoute>
+                    <Checkout />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/order-confirmation/:orderId"
+                element={
+                  <ProtectedRoute>
+                    <OrderConfirmation />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/profile/:email?"
                 element={
@@ -89,8 +98,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
-              {/* Edit Profile - For regular users to edit their own profile */}
               <Route
                 path="/profile/edit"
                 element={
@@ -109,8 +116,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
-              {/* Admin Edit User - Edit any user by email */}
               <Route
                 path="/users/edit/:email"
                 element={
@@ -119,40 +124,14 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
-              {/* Admin Tips Management */}
               <Route
-                path="/admin/tips"
+                path="/admin/*"
                 element={
                   <ProtectedRoute adminOnly>
-                    <AdminTips />
+                    <AdminDashboard />
                   </ProtectedRoute>
                 }
               />
-
-              {/* Edit Tip - Pass tip data via state */}
-              <Route
-                path="/admin/tips/edit"
-                element={
-                  <ProtectedRoute adminOnly>
-                    <EditTip />
-                  </ProtectedRoute>
-                }
-              />
-
-<Route path="/marketplace" element={<Marketplace />} />
-<Route path="/cart" element={
-  <ProtectedRoute>
-    <Cart />
-  </ProtectedRoute>
-} />
-
-// In your Routes, add this single admin route instead of multiple ones
-<Route path="/admin/*" element={
-  <ProtectedRoute adminOnly>
-    <AdminDashboard />
-  </ProtectedRoute>
-} />
 
               {/* 404 Not Found */}
               <Route path="*" element={<NotFound />} />

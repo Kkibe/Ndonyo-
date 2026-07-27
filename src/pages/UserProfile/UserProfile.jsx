@@ -1,59 +1,53 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { userService } from '../../services/marketplace.service';
-import { transactionService } from '../../services/transaction.service';
+import { userService, orderService, wishlistService } from '../../services/marketplace.service';
 import { useAuth } from '../../context/AuthContext';
 import { usePagination } from '../../hooks/usePagination';
 import Loader from '../../components/Loader/Loader';
 import './UserProfile.scss';
 
 export default function UserProfile() {
-  const { id } = useParams();
+  const { email } = useParams();
   const navigate = useNavigate();
-  const { currentUser, isAdmin } = useAuth();
+  const { currentUser, userData, isAdmin } = useAuth();
   const [profileUser, setProfileUser] = useState(null);
-  const [transactions, setTransactions] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [wishlist, setWishlist] = useState([]);
   const [loading, setLoading] = useState(true);
-  // Add state for active tab
+  const [transLoading, setTransLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
-  const {
-    page,
-    pageSize,
-    hasMore,
-    setHasMore,
-    loading: transLoading,
-    setLoading: setTransLoading,
-    lastElementRef,
-  } = usePagination(10);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [lastElementRef] = usePagination(setPage, hasMore, transLoading);
 
-  const isOwnProfile = currentUser?.email === (id || currentUser?.email);
-  const canEdit = isAdmin || isOwnProfile;
+  const isOwnProfile = !email || email === currentUser?.email;
+  const canEdit = isOwnProfile || isAdmin;
 
   const fetchUser = useCallback(async () => {
-    const email = id || currentUser?.email;
-    if (!email) return;
-
-    const user = await userService.getUser(email);
+    let targetEmail = email || currentUser?.email;
+    if (!targetEmail) return;
+    const user = await userService.getUserByEmail(targetEmail);
     setProfileUser(user);
-  }, [id, currentUser]);
+  }, [email, currentUser]);
 
-  const fetchTransactions = useCallback(async () => {
-    if (!profileUser?.email) return;
-
+  const fetchOrders = useCallback(async () => {
+    if (!profileUser?.id) return;
     setTransLoading(true);
-    const result = await transactionService.getUserTransactions(
-      profileUser.email,
-      page,
-      pageSize
-    );
+    const result = await orderService.getUserOrders(profileUser.id, page, 10);
     if (page === 1) {
-      setTransactions(result.transactions);
+      setOrders(result.orders);
     } else {
-      setTransactions((prev) => [...prev, ...result.transactions]);
+      setOrders((prev) => [...prev, ...result.orders]);
     }
     setHasMore(result.hasMore);
     setTransLoading(false);
-  }, [profileUser, page, pageSize, setHasMore, setTransLoading]);
+  }, [profileUser, page]);
+
+  const fetchWishlist = useCallback(async () => {
+    if (!profileUser?.id || !isOwnProfile) return;
+    const items = await wishlistService.getWishlist(profileUser.id);
+    setWishlist(items);
+  }, [profileUser, isOwnProfile]);
 
   useEffect(() => {
     fetchUser();
@@ -61,37 +55,27 @@ export default function UserProfile() {
 
   useEffect(() => {
     if (profileUser) {
-      fetchTransactions();
+      fetchOrders();
+      fetchWishlist();
       setLoading(false);
     }
-  }, [profileUser, fetchTransactions]);
-
-  const handleEditClick = () => {
-    //navigate(`/profile/${profileUser.username}/edit`, { state: profileUser });
-    if (isAdmin) {
-      navigate(`/users/edit/${encodeURIComponent(profileUser.email)}`, { state: profileUser });
-    } else {
-      navigate('/profile/edit', { state: profileUser });
-    }
-  };
+  }, [profileUser, fetchOrders, fetchWishlist]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    let day = date.getDate();
-    const suffix = (day) => {
-      if (day > 3 && day < 21) return 'th';
-      switch (day % 10) {
-        case 1: return 'st';
-        case 2: return 'nd';
-        case 3: return 'rd';
-        default: return 'th';
-      }
-    };
-    return `${day}${suffix(day)} ${date.toLocaleString('en-GB', {
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      day: 'numeric',
       month: 'long',
       year: 'numeric',
-    })}`;
+    });
+  };
+
+  const statusColors = {
+    pending: '#e65100',
+    confirmed: '#1565c0',
+    shipped: '#2e7d32',
+    delivered: '#1b5e20',
+    cancelled: '#c62828',
   };
 
   if (loading) return <Loader />;
@@ -105,53 +89,39 @@ export default function UserProfile() {
             <img
               src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
                 profileUser.username || profileUser.email
-              )}&background=00BFFF&color=fff`}
+              )}&background=00ae58&color=fff`}
               alt="Profile"
             />
             <div className="gradient"></div>
-            {profileUser.isPremium && (
-              <span className="premium-badge">⭐</span>
-            )}
           </div>
           <div className="user-info">
             <h2 className="user-name">
               {profileUser.username || profileUser.email.split('@')[0]}
             </h2>
             <p className="user-email">{profileUser.email}</p>
-            {profileUser.isPremium && (
-              <span className="vip-tag">VIP Member</span>
+            {profileUser.role === 'seller' && (
+              <span className="seller-tag">Seller</span>
             )}
           </div>
         </div>
-        
+
         <div className="user-links">
           <div className="user-stats">
             <div className="stat">
-              <span className="stat-value">{transactions.length}</span>
-              <span className="stat-label">Transactions</span>
+              <span className="stat-value">{orders.length}</span>
+              <span className="stat-label">Orders</span>
             </div>
-            <div className="stat">
-              <span className="stat-value">
-                {profileUser.isPremium ? 'Active' : 'Inactive'}
-              </span>
-              <span className="stat-label">Status</span>
-            </div>
-            {profileUser.subscription && (
+            {isOwnProfile && (
               <div className="stat">
-                <span className="stat-value">{profileUser.subscription}</span>
-                <span className="stat-label">Plan</span>
+                <span className="stat-value">{wishlist.length}</span>
+                <span className="stat-label">Wishlist</span>
               </div>
             )}
           </div>
-          
+
           <div className="user-actions">
-            {!profileUser.isPremium && isOwnProfile && (
-              <button className="btn vip-btn" onClick={() => navigate('/pay')}>
-                GET VIP
-              </button>
-            )}
             {canEdit && (
-              <button className="btn edit-btn" onClick={handleEditClick}>
+              <button className="btn edit-btn" onClick={() => navigate('/profile/edit', { state: profileUser })}>
                 Edit Profile
               </button>
             )}
@@ -159,95 +129,110 @@ export default function UserProfile() {
         </div>
       </div>
 
-      // Add tabs navigation in the JSX after the header
-<div className="profile-tabs">
-  <button className={`tab-btn ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>Profile</button>
-  <button className={`tab-btn ${activeTab === 'transactions' ? 'active' : ''}`} onClick={() => setActiveTab('transactions')}>Transactions</button>
-  <button className={`tab-btn ${activeTab === 'orders' ? 'active' : ''}`} onClick={() => setActiveTab('orders')}>Orders</button>
-  <button className={`tab-btn ${activeTab === 'wishlist' ? 'active' : ''}`} onClick={() => setActiveTab('wishlist')}>Wishlist</button>
-  <button className={`tab-btn ${activeTab === 'notifications' ? 'active' : ''}`} onClick={() => setActiveTab('notifications')}>Notifications</button>
-  <button className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>Settings</button>
-</div>
-
-
-// Conditional rendering for each tab
-{activeTab === 'profile' && <div className="profile-content">...</div>}
-{activeTab === 'transactions' && <div className="transactions-section">
-        <h2 className="section-title">Transaction History</h2>
-        {transactions.length === 0 && !transLoading ? (
-          <div className="no-transactions">
-            <div className="empty-icon">💰</div>
-            <h3>No Transactions Yet</h3>
-            <p>Your transaction history will appear here once you make a purchase.</p>
-            <p>(This feature is not available yet!)</p>
-            {isOwnProfile && (
-              <button className="btn" onClick={() => navigate('/pay')}>
-                Upgrade to VIP
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="transactions-list">
-            {transactions.map((transaction) => (
-              <details key={transaction.id} className="transaction-item">
-                <summary>
-                  <div className="transaction-summary">
-                    <span className="transaction-icon" style={{ backgroundColor: transaction.type === 'credit' ? '#e8f5e9' : '#fff3e0' }}>
-                      {transaction.type === 'credit' ? '💰' : '💸'}
-                    </span>
-                    <div className="transaction-info">
-                      <h3 className="transaction-name">{transaction.description || 'VIP Subscription'}</h3>
-                      <small className="transaction-category">
-                        {transaction.category || 'Subscription'}
-                      </small>
-                    </div>
-                    <span className={`transaction-amount ${transaction.type}`}>
-                      {transaction.type === 'credit' ? '+' : '-'}{' '}
-                      {transaction.currency || 'KES'} {transaction.amount}
-                    </span>
-                  </div>
-                </summary>
-                <div className="transaction-details">
-                  <dl>
-                    <div>
-                      <dt>📅 Date & Time</dt>
-                      <dd>{formatDate(transaction.createdAt?.toDate?.() || transaction.createdAt)}</dd>
-                    </div>
-                    {transaction.paymentMethod && (
-                      <div>
-                        <dt>💳 Payment Method</dt>
-                        <dd>{transaction.paymentMethod}</dd>
-                      </div>
-                    )}
-                    <div>
-                      <dt>🆔 Reference ID</dt>
-                      <dd>{transaction.id || transaction.reference || 'N/A'}</dd>
-                    </div>
-                  </dl>
-                </div>
-              </details>
-            ))}
-            {transLoading && (
-              <div className="loading-more">
-                <Loader />
-              </div>
-            )}
-            {hasMore && !transLoading && (
-              <div ref={lastElementRef} className="load-more-trigger" />
-            )}
-          </div>
+      <div className="profile-tabs">
+        <button className={`tab-btn ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>Profile</button>
+        <button className={`tab-btn ${activeTab === 'orders' ? 'active' : ''}`} onClick={() => setActiveTab('orders')}>Orders</button>
+        {isOwnProfile && (
+          <button className={`tab-btn ${activeTab === 'wishlist' ? 'active' : ''}`} onClick={() => setActiveTab('wishlist')}>Wishlist</button>
         )}
-      </div>}
-{activeTab === 'orders' && <div className="orders-section">Orders content</div>}
-{activeTab === 'wishlist' && <div className="wishlist-section">Wishlist content</div>}
-{activeTab === 'notifications' && <div className="notifications-section">Notifications content</div>}
-{activeTab === 'settings' && <div className="settings-section">Settings content</div>}
+        <button className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>Settings</button>
+      </div>
 
-      
-      
+      {activeTab === 'profile' && (
+        <div className="profile-content">
+          <h2 className="section-title">Account Details</h2>
+          <div className="profile-details">
+            <div className="detail-row"><strong>Username:</strong> {profileUser.username || 'Not set'}</div>
+            <div className="detail-row"><strong>Email:</strong> {profileUser.email}</div>
+            {profileUser.phone && <div className="detail-row"><strong>Phone:</strong> {profileUser.phone}</div>}
+            {profileUser.location && <div className="detail-row"><strong>Location:</strong> {profileUser.location}</div>}
+            <div className="detail-row"><strong>Member since:</strong> {formatDate(profileUser.created_at)}</div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'orders' && (
+        <div className="orders-section">
+          <h2 className="section-title">Order History</h2>
+          {orders.length === 0 && !transLoading ? (
+            <div className="no-transactions">
+              <div className="empty-icon">📦</div>
+              <h3>No Orders Yet</h3>
+              <p>Your order history will appear here once you place an order.</p>
+              <button className="btn" onClick={() => navigate('/marketplace')}>Start Shopping</button>
+            </div>
+          ) : (
+            <div className="transactions-list">
+              {orders.map((order) => (
+                <details key={order.id} className="transaction-item">
+                  <summary>
+                    <div className="transaction-summary">
+                      <span className="transaction-icon" style={{ backgroundColor: '#e8f5e9' }}>📦</span>
+                      <div className="transaction-info">
+                        <h3 className="transaction-name">Order #{order.id.slice(-8).toUpperCase()}</h3>
+                        <small className="transaction-category">{formatDate(order.created_at)}</small>
+                      </div>
+                      <span className="transaction-amount">
+                        KSH {Number(order.total).toLocaleString()}
+                      </span>
+                      <span className="status-pill" style={{ backgroundColor: statusColors[order.status] || '#666', color: 'white' }}>
+                        {order.status}
+                      </span>
+                    </div>
+                  </summary>
+                  <div className="transaction-details">
+                    <dl>
+                      <div><dt>Items</dt><dd>{order.items?.length || 0} product(s)</dd></div>
+                      <div><dt>Payment</dt><dd>{order.payment_method}</dd></div>
+                      {order.tracking_number && <div><dt>Tracking</dt><dd>{order.tracking_number}</dd></div>}
+                      <div><dt>Shipping to</dt><dd>{order.shipping_details?.city}, Kenya</dd></div>
+                    </dl>
+                  </div>
+                </details>
+              ))}
+              {transLoading && <div className="loading-more"><Loader /></div>}
+              {hasMore && !transLoading && <div ref={lastElementRef} className="load-more-trigger" />}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'wishlist' && isOwnProfile && (
+        <div className="wishlist-section">
+          <h2 className="section-title">My Wishlist</h2>
+          {wishlist.length === 0 ? (
+            <div className="no-transactions">
+              <div className="empty-icon">❤️</div>
+              <h3>Your wishlist is empty</h3>
+              <p>Save products you love by tapping the heart icon.</p>
+              <button className="btn" onClick={() => navigate('/marketplace')}>Browse Products</button>
+            </div>
+          ) : (
+            <div className="wishlist-grid">
+              {wishlist.map((product) => (
+                <div key={product.id} className="wishlist-card" onClick={() => navigate(`/product/${product.id}`)}>
+                  <img src={product.images?.[0] || '/placeholder.jpg'} alt={product.name} />
+                  <h4>{product.name}</h4>
+                  <span className="price">KSH {Number(product.price).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'settings' && isOwnProfile && (
+        <div className="settings-section">
+          <h2 className="section-title">Settings</h2>
+          <div className="profile-details">
+            <p>Manage your account preferences here.</p>
+          </div>
+        </div>
+      )}
+
       <div className="explore">
-        <button className="explore-btn" onClick={() => navigate('/')}>
-          EXPLORE MORE
+        <button className="explore-btn" onClick={() => navigate('/marketplace')}>
+          EXPLORE PRODUCTS
         </button>
       </div>
     </div>

@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate } from "react-router-dom";
-import { signOut } from "firebase/auth";
-import { auth } from "../../config/firebase";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { Menu, Close, Person, AdminPanelSettings, ShoppingCart, Store, Dashboard } from '@mui/icons-material';
 import './Navbar.scss';
 
 export default function Navbar() {
-  const { currentUser, userData, isAdmin, isPremium, loading } = useAuth();
+  const { currentUser, userData, isAdmin, loading, logout } = useAuth();
   const { cart } = useCart();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -60,7 +58,7 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await logout();
       setMobileMenuOpen(false);
       navigate('/');
     } catch (err) {
@@ -108,7 +106,6 @@ export default function Navbar() {
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleProfileClick(); }}>
                   <Person className="user-icon" />
                   <span>Hi, {username}</span>
-                  {isPremium && !loading && <span className="vip-badge">⭐</span>}
                 </div>
                 
                 <NavLink to="/cart" className="cart-link" onClick={closeMobileMenu}>

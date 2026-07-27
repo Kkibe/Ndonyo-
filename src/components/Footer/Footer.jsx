@@ -1,8 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { socialLinks } from '../../data/mockData';
-import { ArrowUpward, Telegram, WhatsApp, Facebook, X, Instagram } from '@mui/icons-material';
+import { ArrowUpward, Telegram, WhatsApp } from '@mui/icons-material';
 import './Footer.scss';
 
 export default function Footer() {
@@ -17,20 +16,11 @@ export default function Footer() {
       <div className="social">
         <h2>Follow us</h2>
         <div className="wrapper">
-          <a href={socialLinks.telegramChannel} target="_blank" rel="noopener noreferrer" className="telegram">
+          <a href="https://t.me/powerkingtips" target="_blank" rel="noopener noreferrer" className="telegram" aria-label="Telegram">
             <Telegram />
           </a>
-          <a href={socialLinks.whatsappChannel} target="_blank" rel="noopener noreferrer" className="whatsapp">
+          <a href="https://whatsapp.com/channel/0029Vb3Louu9xVJktevbuZ2K" target="_blank" rel="noopener noreferrer" className="whatsapp" aria-label="WhatsApp">
             <WhatsApp />
-          </a>
-          <a href={socialLinks.facebookPage} target="_blank" rel="noopener noreferrer" className="facebook">
-            <Facebook />
-          </a>
-          <a href={socialLinks.xPage} target="_blank" rel="noopener noreferrer" className="twitter">
-            <X />
-          </a>
-          <a href={socialLinks.instagramPage} target="_blank" rel="noopener noreferrer" className="instagram">
-            <Instagram />
           </a>
         </div>
       </div>
@@ -38,12 +28,16 @@ export default function Footer() {
       <hr />
 
       <div className="footer-bottom">
-        <p>&copy; PowerKing Tips {new Date().getFullYear()}</p>
-        
+        <p>&copy; Ndonyo {new Date().getFullYear()}</p>
+
+        <NavLink to="/marketplace" className="footer-link">
+          Shop
+        </NavLink>
+
         <NavLink to="/about#faq" className="footer-link">
           FAQ
         </NavLink>
-        
+
         {!currentUser && (
           <>
             <NavLink to="/login" className="footer-link">
@@ -54,28 +48,30 @@ export default function Footer() {
             </NavLink>
           </>
         )}
-        
-        <NavLink to="/pay" className="footer-link">
-          Upgrade to VIP
-        </NavLink>
-        
+
         {currentUser && (
           <NavLink to={`/profile/${currentUser.email}`} className="footer-link">
             My Profile
           </NavLink>
         )}
-        
+
+        {currentUser && (
+          <NavLink to="/cart" className="footer-link">
+            My Cart
+          </NavLink>
+        )}
+
         {isAdmin && (
           <>
             <NavLink to="/users" className="footer-link">
               Users
             </NavLink>
-            <NavLink to="/admin/tips" className="footer-link">
-              Add Tip
+            <NavLink to="/admin/dashboard" className="footer-link">
+              Admin Panel
             </NavLink>
           </>
         )}
-        
+
         <button className="btn-top" onClick={handleScrollToTop} aria-label="Back to top">
           <ArrowUpward />
         </button>

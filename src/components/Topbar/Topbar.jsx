@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from "react-router-dom";
-import { socialLinks } from "../../data/mockData";
-import { Telegram, WhatsApp, Facebook, X, Instagram, Bolt } from '@mui/icons-material';
+import { Telegram, WhatsApp, LocalShipping, SupportAgent } from '@mui/icons-material';
 import './Topbar.scss'
 
 export default function Topbar() {
@@ -19,30 +18,22 @@ export default function Topbar() {
     <div className={`topbar ${scrolled ? 'scrolled' : ''}`}>
       <div className="topbar-container">
         <div className="topbar-left">
-          <Bolt className="live-icon" />
-          <span className="live-text">Live Tips Today!</span>
+          <LocalShipping className="live-icon" />
+          <span className="live-text">Free shipping on orders over KSH 5,000</span>
         </div>
         
         <div className="topbar-social">
-          <a href={socialLinks.telegramChannel} target="_blank" rel="noopener noreferrer" className="social-icon telegram">
+          <a href="https://t.me/powerkingtips" target="_blank" rel="noopener noreferrer" className="social-icon telegram" aria-label="Telegram">
             <Telegram />
           </a>
-          <a href={socialLinks.whatsappChannel} target="_blank" rel="noopener noreferrer" className="social-icon whatsapp">
+          <a href="https://whatsapp.com/channel/0029Vb3Louu9xVJktevbuZ2K" target="_blank" rel="noopener noreferrer" className="social-icon whatsapp" aria-label="WhatsApp">
             <WhatsApp />
-          </a>
-          <a href={socialLinks.facebookPage} target="_blank" rel="noopener noreferrer" className="social-icon facebook">
-            <Facebook />
-          </a>
-          <a href={socialLinks.xPage} target="_blank" rel="noopener noreferrer" className="social-icon twitter">
-            <X />
-          </a>
-          <a href={socialLinks.instagramPage} target="_blank" rel="noopener noreferrer" className="social-icon instagram">
-            <Instagram />
           </a>
         </div>
         
         <div className="topbar-right">
-          <span className="tips-count">🏆 Daily Tips</span>
+          <SupportAgent className="tips-count" style={{ fontSize: 14, marginRight: 4 }} />
+          <span className="tips-count">24/7 Support</span>
         </div>
       </div>
     </div>

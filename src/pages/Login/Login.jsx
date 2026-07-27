@@ -58,7 +58,7 @@ export default function Login() {
     <div className="login-page">
       <div className="login-container">
         <h1>Welcome Back</h1>
-        <p>Login to access your VIP predictions</p>
+        <p>Login to access your account and orders</p>
 
         <form onSubmit={handleSubmit}>
           <div className="input-group">

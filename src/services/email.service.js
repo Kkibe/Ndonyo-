@@ -1,63 +1,77 @@
-import emailjs from '@emailjs/browser';
+import { supabase } from '../config/supabase';
 
-// Initialize EmailJS
-emailjs.init('YOUR_PUBLIC_KEY');
-
-export const sendEmail = async (templateName, templateParams, toEmail) => {
+/**
+ * Sends an email by invoking the send-email edge function.
+ * @param {string} template - welcome | login_alert | order_confirmation | order_status | new_feature
+ * @param {object} params - template parameters
+ * @param {string} toEmail - recipient email
+ */
+export const sendEmail = async (template, params, toEmail) => {
   try {
-    const response = await emailjs.send('YOUR_SERVICE_ID', templateName, {
-      to_email: toEmail,
-      ...templateParams,
+    const { data, error } = await supabase.functions.invoke('send-email', {
+      body: { template, params, to_email: toEmail },
     });
-    return { success: true, response };
+
+    if (error) {
+      console.error('Email send error:', error);
+      return { success: false, error: error.message };
+    }
+    return { success: true, data };
   } catch (error) {
     console.error('Email sending failed:', error);
-    return { success: false, error };
+    return { success: false, error: error.message };
   }
 };
 
-// Specific email functions
-export const sendLoginAlert = (user, loginData) => {
-  return sendEmail(
-    'template_login_alert',
-    {
-      username: user.username,
-      location: loginData.location,
-      device: loginData.device,
-      browser: loginData.browser,
-      time: new Date().toLocaleString(),
-      resetPasswordLink: `${window.location.origin}/reset-password`,
-    },
-    user.email
-  );
-};
-
+// Welcome email on registration
 export const sendWelcomeEmail = (user) => {
-  return sendEmail(
-    'template_welcome',
-    {
-      username: user.username,
-      verificationLink: `${window.location.origin}/verify-email/${user.id}`,
-      dashboardLink: `${window.location.origin}/dashboard`,
-    },
-    user.email
-  );
+  return sendEmail('welcome', {
+    username: user.username || user.email?.split('@')[0],
+    dashboardLink: `${window.location.origin}`,
+  }, user.email);
 };
 
-export const sendReceipt = (user, paymentData) => {
-  return sendEmail(
-    'template_receipt',
-    {
-      username: user.username,
-      transactionId: paymentData.id,
-      paymentDate: new Date(paymentData.date).toLocaleString(),
-      paymentMethod: paymentData.method,
-      planDuration: paymentData.plan,
-      expiryDate: new Date(paymentData.expiry).toLocaleDateString(),
-      amount: paymentData.amount,
-      currency: paymentData.currency,
-      dashboardLink: `${window.location.origin}/dashboard`,
-    },
-    user.email
-  );
+// Login alert when a user signs in
+export const sendLoginAlertEmail = (user, loginData = {}) => {
+  return sendEmail('login_alert', {
+    username: user.username || user.email?.split('@')[0],
+    location: loginData.location || 'Kenya',
+    device: loginData.device || navigator?.userAgent?.includes('Mobile') ? 'Mobile' : 'Desktop',
+    browser: loginData.browser || navigator?.userAgent || 'Unknown',
+    time: new Date().toLocaleString('en-GB', { timeZone: 'Africa/Nairobi' }),
+    resetPasswordLink: `${window.location.origin}/login`,
+  }, user.email);
+};
+
+// Order confirmation email
+export const sendOrderConfirmationEmail = (orderData) => {
+  return sendEmail('order_confirmation', {
+    username: orderData.username,
+    orderId: orderData.orderId,
+    items: orderData.items,
+    total: orderData.total,
+    shippingDetails: orderData.shippingDetails,
+    paymentMethod: orderData.paymentMethod,
+    dashboardLink: `${window.location.origin}`,
+  }, orderData.to_email);
+};
+
+// Order status update email (shipped, delivered, etc.)
+export const sendOrderStatusEmail = (statusData) => {
+  return sendEmail('order_status', {
+    username: statusData.username,
+    orderId: statusData.orderId,
+    status: statusData.status,
+    trackingNumber: statusData.trackingNumber,
+    dashboardLink: `${window.location.origin}`,
+  }, statusData.to_email);
+};
+
+// New feature announcement
+export const sendNewFeatureEmail = (user, message) => {
+  return sendEmail('new_feature', {
+    username: user.username || user.email?.split('@')[0],
+    message,
+    dashboardLink: `${window.location.origin}`,
+  }, user.email);
 };

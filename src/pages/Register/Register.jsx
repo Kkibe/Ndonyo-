@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import './Register.scss';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/auth.service';
+import { sendWelcomeEmail } from '../../services/email.service';
 import { Visibility, VisibilityOff, Google } from '@mui/icons-material';
 import GoogleButton from 'react-google-button';
 
@@ -37,8 +38,13 @@ export default function Register() {
     const result = await authService.register(email, password, username);
     
     if (result.success) {
-      setSuccess('Registration successful! Please check your email for verification.');
-      setTimeout(() => navigate('/login'), 3000);
+      setSuccess('Account created! Redirecting to login...');
+      try {
+        await sendWelcomeEmail({ email, username });
+      } catch (e) {
+        console.error('Welcome email failed:', e);
+      }
+      setTimeout(() => navigate('/login'), 2000);
     } else {
       setError(result.error);
     }
@@ -71,7 +77,7 @@ export default function Register() {
     <div className="register-page">
       <div className="register-container">
         <h1>Create Account</h1>
-        <p>Join PowerKing Tips for free</p>
+        <p>Join Ndonyo and start shopping</p>
 
         <form onSubmit={handleSubmit}>
           <div className="input-group">

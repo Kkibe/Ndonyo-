@@ -25,6 +25,7 @@
     "@nowpaymentsio/nowpayments-api-js": "^1.0.5",
     "@paypal/paypal-js": "^9.5.0",
     "@paypal/react-paypal-js": "^8.7.0",
+    "@supabase/supabase-js": "^2.110.9",
     "axios": "^1.7.4",
     "date-fns": "^3.3.1",
     "firebase": "^11.0.1",

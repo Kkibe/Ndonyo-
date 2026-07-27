@@ -12,20 +12,20 @@ export default function About() {
       <AppHelmet title={"About"} location={'/about'} />
       <div className="about-us">
         <div className="info">
-          <h1 className="about-title">About Us</h1>
-          <p className="about-description">Welcome to our football prediction platform, your ultimate destination for accurate match forecasts, insightful analysis, and real-time updates! Whether you're a football enthusiast, a seasoned bettor, or just curious about the beautiful game, our website offers something special for everyone.</p>
-          
-          <h1 className="section-title">For Football Fans</h1>
-          <p className="section-description">Dive into a world of football predictions and analysis. From the Premier League to international tournaments, we provide forecasts backed by data and expert insights. Stay ahead of the game with our curated content, tailored to keep you informed and engaged throughout the season.</p>
-          
-          <h1 className="section-title">For Bettors and Analysts</h1>
-          <p className="section-description">Gain access to detailed match predictions, player stats, and historical data to make informed decisions. Our platform is designed to empower you with the tools and insights you need to succeed, whether you're betting for fun or professionally analyzing the sport.</p>
-          
+          <h1 className="about-title">About Ndonyo</h1>
+          <p className="about-description">Welcome to Ndonyo, your online market day. We connect buyers and sellers across Kenya and beyond, making it easy to find quality products at fair prices. Whether you're shopping for footwear, apparel, equipment, or everyday essentials, Ndonyo brings the market to your fingertips.</p>
+
+          <h1 className="section-title">For Shoppers</h1>
+          <p className="section-description">Discover thousands of products from trusted sellers, all in one place. Compare prices, read reviews, and shop with confidence thanks to our secure checkout and buyer protection. Pay the way that suits you — M-Pesa, card, or cash on delivery — and get your order delivered fast.</p>
+
+          <h1 className="section-title">For Sellers</h1>
+          <p className="section-description">Grow your business on Ndonyo. List your products in minutes, reach customers across the country, and manage everything from a simple dashboard. We handle the payments and help with shipping so you can focus on what you do best.</p>
+
           <h1 className="section-title">Stay Updated with Real-Time Insights</h1>
-          <p className="section-description">Our platform delivers live updates, ensuring you're always informed about the latest match developments, team news, and performance metrics. Subscribe to our alerts and never miss a critical update during the season.</p>
-          
+          <p className="section-description">Track your orders in real time, get notified about new arrivals and deals, and stay on top of your shopping. Our platform keeps you informed every step of the way, from checkout to delivery.</p>
+
           <h1 className="section-title">Our Mission</h1>
-          <p className="section-description mission-text">We aim to revolutionize football predictions by combining cutting-edge technology, expert knowledge, and community-driven engagement. Join us today and become part of a thriving community that shares your passion for football and the excitement of the game. Let's predict, analyze, and celebrate football together!</p>
+          <p className="section-description mission-text">We're here to make online shopping simple, safe, and accessible for everyone. By connecting local sellers with buyers, we help communities thrive and give every product a fair chance to find its home. Join us today and be part of a marketplace built on trust.</p>
         </div>
       </div>
       <h1 className="faq-main-title" id='faq'>FAQ's</h1>
