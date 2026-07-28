@@ -1,30 +1,65 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Favorite, FavoriteBorder, ShoppingCart, Visibility } from '@mui/icons-material';
+import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
+import { useWishlist } from '../../context/WishlistContext';
+import toast from 'react-hot-toast';
 import './ProductCard.scss';
 
-export default function ProductCard({ product, onAddToCart, onAddToWishlist, isWishlisted = false }) {
+export default function ProductCard({ product }) {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const { addToCart } = useCart();
+  const { toggleWishlist, isWishlisted } = useWishlist();
   const [selectedSize, setSelectedSize] = useState(product.sizes?.[0] || null);
   const [selectedColor, setSelectedColor] = useState(product.colors?.[0] || null);
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [wishloading, setWishLoading] = useState(false);
+
+  const outOfStock = !product.in_stock || product.stock === 0;
 
   const handleQuickView = (e) => {
     e.stopPropagation();
     navigate(`/product/${product.id}`);
   };
 
-  const handleAddToWishlist = (e) => {
+  const handleAddToWishlist = async (e) => {
     e.stopPropagation();
-    if (onAddToWishlist) {
-      onAddToWishlist(product);
+    if (!currentUser) {
+      toast.error('Please log in to use your wishlist');
+      navigate('/login');
+      return;
+    }
+    setWishLoading(true);
+    const result = await toggleWishlist(product.id);
+    setWishLoading(false);
+    if (result.success) {
+      if (isWishlisted(product.id)) {
+        toast.success('Removed from wishlist');
+      } else {
+        toast.success('Added to wishlist!');
+      }
+    } else if (result.error !== 'not_authenticated') {
+      toast.error('Could not update wishlist');
     }
   };
 
-  const handleAddToCartClick = (e) => {
+  const handleAddToCartClick = async (e) => {
     e.stopPropagation();
-    onAddToCart(product, selectedSize, selectedColor);
+    if (!currentUser) {
+      toast.error('Please log in to add items to cart');
+      navigate('/login');
+      return;
+    }
+    if (outOfStock) return;
+    const result = await addToCart(product.id, 1, selectedSize, selectedColor);
+    if (result.success) {
+      toast.success(`${product.name} added to cart!`);
+    } else {
+      toast.error(result.error || 'Could not add to cart');
+    }
   };
 
   return (
@@ -42,7 +77,7 @@ export default function ProductCard({ product, onAddToCart, onAddToWishlist, isW
           style={{ opacity: imageLoaded ? 1 : 0 }}
         />
         {product.discount && <span className="discount-badge">-{product.discount}%</span>}
-        {(!product.in_stock || product.stock === 0) && <span className="out-of-stock">Out of Stock</span>}
+        {outOfStock && <span className="out-of-stock">Out of Stock</span>}
         {product.isNew && <span className="new-badge">New</span>}
         {product.bestseller && <span className="bestseller-badge">⭐ Bestseller</span>}
         
@@ -50,10 +85,10 @@ export default function ProductCard({ product, onAddToCart, onAddToWishlist, isW
           <button className="action-btn" onClick={handleQuickView} title="Quick View">
             <Visibility />
           </button>
-          <button className="action-btn" onClick={handleAddToWishlist} title="Add to Wishlist">
-            {isWishlisted ? <Favorite className="active" /> : <FavoriteBorder />}
+          <button className="action-btn" onClick={handleAddToWishlist} disabled={wishloading} title="Add to Wishlist">
+            {isWishlisted(product.id) ? <Favorite className="active" /> : <FavoriteBorder />}
           </button>
-          <button className="action-btn" onClick={handleAddToCartClick} title="Add to Cart" disabled={!product.in_stock || product.stock === 0}>
+          <button className="action-btn" onClick={handleAddToCartClick} disabled={outOfStock} title="Add to Cart">
             <ShoppingCart />
           </button>
         </div>
@@ -116,9 +151,9 @@ export default function ProductCard({ product, onAddToCart, onAddToWishlist, isW
         <button
           className="add-to-cart-btn"
           onClick={handleAddToCartClick}
-          disabled={!product.in_stock || product.stock === 0}
+          disabled={outOfStock}
         >
-          {(!product.in_stock || product.stock === 0) ? 'Out of Stock' : 'Add to Cart'}
+          {outOfStock ? 'Out of Stock' : 'Add to Cart'}
           <ShoppingCart className="btn-icon" />
         </button>
       </div>

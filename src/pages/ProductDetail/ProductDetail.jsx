@@ -3,7 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { productService } from '../../services/marketplace.service';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
+import { useWishlist } from '../../context/WishlistContext';
 import Loader from '../../components/Loader/Loader';
+import toast from 'react-hot-toast';
 import {
   ArrowBack, ShoppingCart, Favorite, FavoriteBorder, Star,
   LocalShipping, Security, Refresh, Store,
@@ -15,6 +17,7 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const { addToCart } = useCart();
+  const { toggleWishlist, isWishlisted } = useWishlist();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -22,6 +25,7 @@ export default function ProductDetail() {
   const [selectedColor, setSelectedColor] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+  const [wishloading, setWishLoading] = useState(false);
 
   const fetchProduct = useCallback(async () => {
     setLoading(true);
@@ -48,19 +52,46 @@ export default function ProductDetail() {
     if (result.success) {
       setAdded(true);
       setTimeout(() => setAdded(false), 2000);
+      toast.success(`${product.name} added to cart!`);
     } else {
-      alert(result.error || 'Could not add to cart');
+      toast.error(result.error || 'Could not add to cart');
     }
   };
 
   const handleBuyNow = async () => {
     if (!currentUser) {
+      toast.error('Please log in to continue');
       navigate('/login');
       return;
     }
     const result = await addToCart(product.id, quantity, selectedSize, selectedColor);
     if (result.success) {
       navigate('/checkout');
+    } else {
+      toast.error(result.error || 'Could not add to cart');
+    }
+  };
+
+  const handleWishlist = async () => {
+    if (!currentUser) {
+      toast.error('Please log in to use your wishlist');
+      navigate('/login');
+      return;
+    }
+    setWishLoading(true);
+    const result = await toggleWishlist(product.id);
+    setWishLoading(false);
+    if (result.success) {
+      if (isWishlisted(product.id)) {
+        toast.success('Removed from wishlist');
+      } else {
+        toast.success('Added to wishlist!');
+      }
+    } else if (result.error === 'not_authenticated') {
+      toast.error('Please log in to use your wishlist');
+      navigate('/login');
+    } else {
+      toast.error('Could not update wishlist');
     }
   };
 
@@ -95,10 +126,10 @@ export default function ProductDetail() {
         <div className="product-images">
           <div className="main-image">
             <img src={images[selectedImage]} alt={product.name} />
-            {!product.inStock && <span className="out-of-stock">Out of Stock</span>}
-            {product.oldPrice && (
+            {(!product.in_stock || product.stock === 0) && <span className="out-of-stock">Out of Stock</span>}
+            {product.old_price && Number(product.old_price) > 0 && (
               <span className="discount-badge">
-                -{Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)}%
+                -{Math.round(((Number(product.old_price) - Number(product.price)) / Number(product.old_price)) * 100)}%
               </span>
             )}
           </div>
@@ -131,14 +162,14 @@ export default function ProductDetail() {
                 />
               ))}
             </div>
-            <span className="review-count">({product.reviews?.length || 0} reviews)</span>
-            <span className="sold">| {product.salesCount || 0} sold</span>
+            <span className="review-count">({product.reviews_count || 0} reviews)</span>
+            <span className="sold">| {product.sales_count || 0} sold</span>
           </div>
 
           <div className="price-box">
-            <span className="current-price">KSH {product.price?.toLocaleString()}</span>
-            {product.oldPrice && (
-              <span className="old-price">KSH {product.oldPrice?.toLocaleString()}</span>
+            <span className="current-price">KSH {Number(product.price || 0).toLocaleString()}</span>
+            {product.old_price && Number(product.old_price) > 0 && (
+              <span className="old-price">KSH {Number(product.old_price).toLocaleString()}</span>
             )}
           </div>
 
@@ -204,7 +235,7 @@ export default function ProductDetail() {
             <button
               className="btn-cart"
               onClick={handleAddToCart}
-              disabled={!product.inStock}
+              disabled={!product.in_stock || product.stock === 0}
             >
               <ShoppingCart />
               {added ? 'Added!' : 'Add to Cart'}
@@ -212,12 +243,17 @@ export default function ProductDetail() {
             <button
               className="btn-buy"
               onClick={handleBuyNow}
-              disabled={!product.inStock}
+              disabled={!product.in_stock || product.stock === 0}
             >
               Buy Now
             </button>
-            <button className="btn-wishlist" title="Add to wishlist">
-              <FavoriteBorder />
+            <button
+              className="btn-wishlist"
+              onClick={handleWishlist}
+              disabled={wishloading}
+              title="Toggle wishlist"
+            >
+              {isWishlisted(product.id) ? <Favorite className="active" /> : <FavoriteBorder />}
             </button>
           </div>
 

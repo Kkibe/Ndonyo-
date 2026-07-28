@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import ForgotPassword from '../../components/ForgotPassword/ForgotPassword';
 import { Visibility, VisibilityOff, Google } from '@mui/icons-material';
 import GoogleButton from 'react-google-button';
+import toast from 'react-hot-toast';
 import emailjs, { EmailJSResponseStatus } from '@emailjs/browser';
 
 export default function Login() {
@@ -145,7 +146,7 @@ export default function Login() {
           onClose={() => setShowForgotPassword(false)}
           onSuccess={() => {
             setShowForgotPassword(false);
-            alert('Password reset email sent! Check your inbox.');
+            toast.success('Password reset email sent! Check your inbox.');
           }}
         />
       )}

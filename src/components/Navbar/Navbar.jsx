@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
-import { Menu, Close, Person, AdminPanelSettings, ShoppingCart, Store, Dashboard } from '@mui/icons-material';
+import { useWishlist } from "../../context/WishlistContext";
+import { Menu, Close, Person, ShoppingCart, Store, Dashboard, Favorite } from '@mui/icons-material';
 import './Navbar.scss';
 
 export default function Navbar() {
   const { currentUser, userData, isAdmin, loading, logout } = useAuth();
   const { cart } = useCart();
+  const { wishlistCount } = useWishlist();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -73,11 +75,8 @@ export default function Navbar() {
   const cartItemCount = cart?.items?.length || 0;
 
   const handleProfileClick = () => {
-    const email = currentUser?.email;
-    if (email) {
-      navigate(`/profile/${encodeURIComponent(email)}`);
-      closeMobileMenu();
-    }
+    navigate('/profile');
+    closeMobileMenu();
   };
 
   return (
@@ -112,16 +111,16 @@ export default function Navbar() {
                   <ShoppingCart className="cart-icon" />
                   <span>Cart ({cartItemCount})</span>
                 </NavLink>
+
+                <NavLink to="/profile" className="wishlist-link" onClick={closeMobileMenu}>
+                  <Favorite className="wishlist-icon" />
+                  <span>Wishlist ({wishlistCount})</span>
+                </NavLink>
                 
                 {isAdmin && (
-                  <>
-                    <NavLink to="/admin/dashboard" className="btn admin-btn" onClick={closeMobileMenu}>
-                      <Dashboard className="admin-icon" /> Dashboard
-                    </NavLink>
-                    <NavLink to="/admin/users" className="btn admin-btn" onClick={closeMobileMenu}>
-                      <AdminPanelSettings className="admin-icon" /> Admin
-                    </NavLink>
-                  </>
+                  <NavLink to="/admin/dashboard" className="btn admin-btn" onClick={closeMobileMenu}>
+                    <Dashboard className="admin-icon" /> Dashboard
+                  </NavLink>
                 )}
                 
                 <button className="btn logout-btn" onClick={handleLogout}>Logout</button>

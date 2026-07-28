@@ -1,18 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { userService, orderService, wishlistService } from '../../services/marketplace.service';
+import { useNavigate } from 'react-router-dom';
+import { orderService, wishlistService, userService } from '../../services/marketplace.service';
 import { useAuth } from '../../context/AuthContext';
+import { useWishlist } from '../../context/WishlistContext';
 import { usePagination } from '../../hooks/usePagination';
 import Loader from '../../components/Loader/Loader';
+import toast from 'react-hot-toast';
 import './UserProfile.scss';
 
 export default function UserProfile() {
-  const { email } = useParams();
   const navigate = useNavigate();
-  const { currentUser, userData, isAdmin } = useAuth();
+  const { currentUser, userData, isAdmin, refreshUserData } = useAuth();
+  const { wishlist, loadWishlist } = useWishlist();
   const [profileUser, setProfileUser] = useState(null);
   const [orders, setOrders] = useState([]);
-  const [wishlist, setWishlist] = useState([]);
   const [loading, setLoading] = useState(true);
   const [transLoading, setTransLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
@@ -20,20 +21,10 @@ export default function UserProfile() {
   const [hasMore, setHasMore] = useState(false);
   const [lastElementRef] = usePagination(setPage, hasMore, transLoading);
 
-  const isOwnProfile = !email || email === currentUser?.email;
-  const canEdit = isOwnProfile || isAdmin;
-
-  const fetchUser = useCallback(async () => {
-    let targetEmail = email || currentUser?.email;
-    if (!targetEmail) return;
-    const user = await userService.getUserByEmail(targetEmail);
-    setProfileUser(user);
-  }, [email, currentUser]);
-
   const fetchOrders = useCallback(async () => {
-    if (!profileUser?.id) return;
+    if (!currentUser?.id) return;
     setTransLoading(true);
-    const result = await orderService.getUserOrders(profileUser.id, page, 10);
+    const result = await orderService.getUserOrders(currentUser.id, page, 10);
     if (page === 1) {
       setOrders(result.orders);
     } else {
@@ -41,25 +32,22 @@ export default function UserProfile() {
     }
     setHasMore(result.hasMore);
     setTransLoading(false);
-  }, [profileUser, page]);
-
-  const fetchWishlist = useCallback(async () => {
-    if (!profileUser?.id || !isOwnProfile) return;
-    const items = await wishlistService.getWishlist(profileUser.id);
-    setWishlist(items);
-  }, [profileUser, isOwnProfile]);
+  }, [currentUser, page]);
 
   useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
-
-  useEffect(() => {
-    if (profileUser) {
+    if (currentUser) {
+      setProfileUser(userData || {
+        id: currentUser.id,
+        email: currentUser.email,
+        username: currentUser.user_metadata?.username || currentUser.email?.split('@')[0],
+      });
       fetchOrders();
-      fetchWishlist();
+      loadWishlist();
+      setLoading(false);
+    } else {
       setLoading(false);
     }
-  }, [profileUser, fetchOrders, fetchWishlist]);
+  }, [currentUser, userData, fetchOrders, loadWishlist]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -79,7 +67,18 @@ export default function UserProfile() {
   };
 
   if (loading) return <Loader />;
-  if (!profileUser) return <div className="error">User not found</div>;
+  if (!currentUser) {
+    return (
+      <div className="user-profile">
+        <div className="no-transactions">
+          <h2>Please log in to view your profile</h2>
+          <button className="btn" onClick={() => navigate('/login')}>Log In</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profileUser) return <Loader />;
 
   return (
     <div className="user-profile">
@@ -96,7 +95,7 @@ export default function UserProfile() {
           </div>
           <div className="user-info">
             <h2 className="user-name">
-              {profileUser.username || profileUser.email.split('@')[0]}
+              {profileUser.username || profileUser.email?.split('@')[0]}
             </h2>
             <p className="user-email">{profileUser.email}</p>
             {profileUser.role === 'seller' && (
@@ -111,20 +110,16 @@ export default function UserProfile() {
               <span className="stat-value">{orders.length}</span>
               <span className="stat-label">Orders</span>
             </div>
-            {isOwnProfile && (
-              <div className="stat">
-                <span className="stat-value">{wishlist.length}</span>
-                <span className="stat-label">Wishlist</span>
-              </div>
-            )}
+            <div className="stat">
+              <span className="stat-value">{wishlist.length}</span>
+              <span className="stat-label">Wishlist</span>
+            </div>
           </div>
 
           <div className="user-actions">
-            {canEdit && (
-              <button className="btn edit-btn" onClick={() => navigate('/profile/edit', { state: profileUser })}>
-                Edit Profile
-              </button>
-            )}
+            <button className="btn edit-btn" onClick={() => navigate('/profile/edit', { state: profileUser })}>
+              Edit Profile
+            </button>
           </div>
         </div>
       </div>
@@ -132,9 +127,7 @@ export default function UserProfile() {
       <div className="profile-tabs">
         <button className={`tab-btn ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>Profile</button>
         <button className={`tab-btn ${activeTab === 'orders' ? 'active' : ''}`} onClick={() => setActiveTab('orders')}>Orders</button>
-        {isOwnProfile && (
-          <button className={`tab-btn ${activeTab === 'wishlist' ? 'active' : ''}`} onClick={() => setActiveTab('wishlist')}>Wishlist</button>
-        )}
+        <button className={`tab-btn ${activeTab === 'wishlist' ? 'active' : ''}`} onClick={() => setActiveTab('wishlist')}>Wishlist</button>
         <button className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>Settings</button>
       </div>
 
@@ -197,7 +190,7 @@ export default function UserProfile() {
         </div>
       )}
 
-      {activeTab === 'wishlist' && isOwnProfile && (
+      {activeTab === 'wishlist' && (
         <div className="wishlist-section">
           <h2 className="section-title">My Wishlist</h2>
           {wishlist.length === 0 ? (
@@ -221,7 +214,7 @@ export default function UserProfile() {
         </div>
       )}
 
-      {activeTab === 'settings' && isOwnProfile && (
+      {activeTab === 'settings' && (
         <div className="settings-section">
           <h2 className="section-title">Settings</h2>
           <div className="profile-details">

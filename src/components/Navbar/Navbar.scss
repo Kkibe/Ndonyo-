@@ -301,6 +301,39 @@ header {
                     }
                 }
             }
+
+            .cart-link, .wishlist-link {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                text-decoration: none;
+                color: var(--dark);
+                font-weight: 600;
+                font-size: 15px;
+                padding: 8px 12px;
+                border-radius: 8px;
+                transition: var(--transition-smooth);
+                position: relative;
+
+                svg {
+                    font-size: 20px;
+                }
+
+                &:hover {
+                    color: var(--blue);
+                    background: rgba(0, 174, 88, 0.05);
+                }
+
+                &.active {
+                    color: var(--blue);
+                }
+
+                @media screen and (max-width: 768px) {
+                    font-size: 18px;
+                    width: 80%;
+                    justify-content: center;
+                }
+            }
         }
     }
 }

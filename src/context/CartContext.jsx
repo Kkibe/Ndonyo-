@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { cartService } from '../services/marketplace.service';
 import { useAuth } from './AuthContext';
+import { toast } from 'react-hot-toast';
 
 const CartContext = createContext();
 
@@ -26,13 +27,13 @@ export const CartProvider = ({ children }) => {
 
   const loadCart = async () => {
     setLoading(true);
-    const userCart = await cartService.getCart(currentUser.uid);
+    const userCart = await cartService.getCart(currentUser.id);
     setCart(userCart);
     setLoading(false);
   };
 
   const addToCart = async (productId, quantity, size, color) => {
-    const result = await cartService.addToCart(currentUser.uid, productId, quantity, size, color);
+    const result = await cartService.addToCart(currentUser.id, productId, quantity, size, color);
     if (result.success) {
       setCart(result.cart);
     }
@@ -40,7 +41,7 @@ export const CartProvider = ({ children }) => {
   };
 
   const updateQuantity = async (productId, quantity, size, color) => {
-    const result = await cartService.updateCartItem(currentUser.uid, productId, quantity, size, color);
+    const result = await cartService.updateCartItem(currentUser.id, productId, quantity, size, color);
     if (result.success) {
       setCart(result.cart);
     }
@@ -48,7 +49,7 @@ export const CartProvider = ({ children }) => {
   };
 
   const removeItem = async (productId, size, color) => {
-    const result = await cartService.removeFromCart(currentUser.uid, productId, size, color);
+    const result = await cartService.removeFromCart(currentUser.id, productId, size, color);
     if (result.success) {
       setCart(result.cart);
     }
@@ -56,7 +57,7 @@ export const CartProvider = ({ children }) => {
   };
 
   const clearCart = async () => {
-    const result = await cartService.clearCart(currentUser.uid);
+    const result = await cartService.clearCart(currentUser.id);
     if (result.success) {
       setCart({ items: [], total: 0 });
     }

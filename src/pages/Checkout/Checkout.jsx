@@ -9,6 +9,7 @@ import {
   ChevronRight, CheckCircle, LocationOn, Person, Phone, Email,
 } from '@mui/icons-material';
 import './Checkout.scss';
+import toast from 'react-hot-toast';
 
 const KENYAN_CITIES = [
   'Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Thika',
@@ -91,19 +92,20 @@ export default function Checkout() {
     setProcessing(true);
     try {
       const result = await orderService.createOrder(
-        currentUser.uid,
+        currentUser.id,
         cart,
         { ...shipping, shippingCost },
         paymentMethod
       );
       if (result.success) {
         await clearCart();
+        toast.success('Order placed successfully!');
         navigate(`/order-confirmation/${result.orderId}`);
       } else {
-        alert('Failed to place order: ' + (result.error || 'Please try again.'));
+        toast.error('Failed to place order: ' + (result.error || 'Please try again.'));
       }
     } catch (err) {
-      alert('Something went wrong. Please try again.');
+      toast.error('Something went wrong. Please try again.');
     } finally {
       setProcessing(false);
     }
@@ -410,7 +412,7 @@ export default function Checkout() {
             </div>
             {shippingCost === 0 && (
               <div className="free-shipping-note">
-                <Truck size={14} /> You saved on shipping!
+                <LocalShipping style={{ fontSize: 14 }} /> You saved on shipping!
               </div>
             )}
             <div className="summary-row total">

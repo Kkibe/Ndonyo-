@@ -37,7 +37,7 @@ const PRICE_RANGES = [
 
 export default function Marketplace() {
   const { currentUser } = useAuth();
-  const { addToCart, cart } = useCart();
+  const { cart } = useCart();
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -108,20 +108,6 @@ export default function Marketplace() {
       product.category.toLowerCase().includes(query)
     );
   }, [products, searchQuery]);
-
-  const handleAddToCart = async (product, size, color) => {
-    if (!currentUser) {
-      alert('Please login to add items to cart');
-      navigate('/login');
-      return;
-    }
-    const result = await addToCart(product.id, 1, size, color);
-    if (result.success) {
-      alert(`${product.name} added to cart!`);
-    } else {
-      alert(result.error);
-    }
-  };
 
   const clearFilters = () => {
     setSelectedCategory('all');
@@ -237,7 +223,6 @@ export default function Marketplace() {
               <ProductCard
                 key={product.id}
                 product={product}
-                onAddToCart={(product, size, color) => handleAddToCart(product, size, color)}
               />
             ))}
           </div>
