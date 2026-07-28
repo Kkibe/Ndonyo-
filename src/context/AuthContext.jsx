@@ -23,7 +23,9 @@ export const AuthProvider = ({ children }) => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [authError, setAuthError] = useState(null);
   const loginAlertSentRef = useRef(false);
+  const pendingAuthErrorRef = useRef(null);
 
   const fetchUserData = useCallback(async (user) => {
     if (!user) {
@@ -37,6 +39,20 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     let isMounted = true;
+
+    // Detect OAuth error params from the redirect URL (e.g. ?error=server_error&error_description=...)
+    const urlParams = new URLSearchParams(window.location.search);
+    const oauthError = urlParams.get('error');
+    const oauthErrorDesc = urlParams.get('error_description');
+    if (oauthError) {
+      console.error('OAuth redirect error:', oauthError, oauthErrorDesc);
+      const msg = oauthErrorDesc || 'Sign-in failed. Please try again.';
+      pendingAuthErrorRef.current = msg;
+      setAuthError(msg);
+      // Clean the URL so the error doesn't persist on refresh
+      const cleanUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -102,11 +118,18 @@ export const AuthProvider = ({ children }) => {
     loginAlertSentRef.current = false;
   }, []);
 
+  const clearAuthError = useCallback(() => {
+    setAuthError(null);
+    pendingAuthErrorRef.current = null;
+  }, []);
+
   const value = {
     currentUser,
     userData,
     loading,
     isAdmin,
+    authError,
+    clearAuthError,
     refreshUserData,
     logout,
   };

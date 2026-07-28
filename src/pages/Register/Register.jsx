@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Register.scss';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/auth.service';
+import { useAuth } from '../../context/AuthContext';
 import { sendWelcomeEmail } from '../../services/email.service';
 import { Visibility, VisibilityOff, Google } from '@mui/icons-material';
 import GoogleButton from 'react-google-button';
@@ -18,6 +19,15 @@ export default function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const navigate = useNavigate();
+
+  const { authError, clearAuthError } = useAuth();
+
+  useEffect(() => {
+    if (authError) {
+      setError(authError);
+      clearAuthError();
+    }
+  }, [authError, clearAuthError]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

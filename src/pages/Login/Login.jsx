@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Login.scss';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/auth.service';
@@ -17,7 +17,14 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const navigate = useNavigate();
-  const { refreshUserData } = useAuth();
+  const { refreshUserData, authError, clearAuthError } = useAuth();
+
+  useEffect(() => {
+    if (authError) {
+      setError(authError);
+      clearAuthError();
+    }
+  }, [authError, clearAuthError]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,7 +32,7 @@ export default function Login() {
     setError('');
 
     const result = await authService.login(email, password);
-    
+
     if (result.success) {
       await refreshUserData();
       navigate('/');
@@ -38,9 +45,9 @@ export default function Login() {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     setError('');
-    
+
     const result = await authService.signInWithGoogle();
-    
+
     if (result.success) {
       await refreshUserData();
       navigate('/');
@@ -81,8 +88,8 @@ export default function Login() {
               required
               disabled={loading || googleLoading}
             />
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="password-toggle"
               onClick={togglePasswordVisibility}
               tabIndex="-1"
@@ -101,15 +108,15 @@ export default function Login() {
             <span>or</span>
           </div>
 
-          {/*<button 
-            type="button" 
+          {/*<button
+            type="button"
             className="btn-google"
             onClick={handleGoogleSignIn}
             disabled={loading || googleLoading}
           >
             <Google />
             <span>{googleLoading ? 'Signing in...' : 'Sign in with Google'}</span>
-          <//button>*/}
+          </button>*/}
 
           <GoogleButton
             style={{width: "100%", borderRadius: "50px"}}
@@ -119,8 +126,8 @@ export default function Login() {
           />
 
           <div className="form-footer">
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="forgot-password"
               onClick={() => setShowForgotPassword(true)}
             >
@@ -134,7 +141,7 @@ export default function Login() {
       </div>
 
       {showForgotPassword && (
-        <ForgotPassword 
+        <ForgotPassword
           onClose={() => setShowForgotPassword(false)}
           onSuccess={() => {
             setShowForgotPassword(false);
