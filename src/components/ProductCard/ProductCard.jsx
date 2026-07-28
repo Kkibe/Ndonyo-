@@ -42,7 +42,7 @@ export default function ProductCard({ product, onAddToCart, onAddToWishlist, isW
           style={{ opacity: imageLoaded ? 1 : 0 }}
         />
         {product.discount && <span className="discount-badge">-{product.discount}%</span>}
-        {!product.inStock && <span className="out-of-stock">Out of Stock</span>}
+        {(!product.in_stock || product.stock === 0) && <span className="out-of-stock">Out of Stock</span>}
         {product.isNew && <span className="new-badge">New</span>}
         {product.bestseller && <span className="bestseller-badge">⭐ Bestseller</span>}
         
@@ -53,7 +53,7 @@ export default function ProductCard({ product, onAddToCart, onAddToWishlist, isW
           <button className="action-btn" onClick={handleAddToWishlist} title="Add to Wishlist">
             {isWishlisted ? <Favorite className="active" /> : <FavoriteBorder />}
           </button>
-          <button className="action-btn" onClick={handleAddToCartClick} title="Add to Cart" disabled={!product.inStock}>
+          <button className="action-btn" onClick={handleAddToCartClick} title="Add to Cart" disabled={!product.in_stock || product.stock === 0}>
             <ShoppingCart />
           </button>
         </div>
@@ -71,12 +71,12 @@ export default function ProductCard({ product, onAddToCart, onAddToWishlist, isW
               <span key={star} className={`star ${star <= (product.rating || 0) ? 'filled' : ''}`}>★</span>
             ))}
           </div>
-          <span className="review-count">({product.reviews?.length || 0})</span>
+          <span className="review-count">({product.reviews_count || 0})</span>
         </div>
         
         <div className="price">
-          <span className="current">KSH {product.price?.toLocaleString()}</span>
-          {product.oldPrice && <span className="old">KSH {product.oldPrice?.toLocaleString()}</span>}
+          <span className="current">KSH {Number(product.price || 0).toLocaleString()}</span>
+          {product.old_price && Number(product.old_price) > 0 && <span className="old">KSH {Number(product.old_price).toLocaleString()}</span>}
         </div>
         
         {product.sizes && product.sizes.length > 0 && (
@@ -116,9 +116,9 @@ export default function ProductCard({ product, onAddToCart, onAddToWishlist, isW
         <button
           className="add-to-cart-btn"
           onClick={handleAddToCartClick}
-          disabled={!product.inStock}
+          disabled={!product.in_stock || product.stock === 0}
         >
-          {product.inStock ? 'Add to Cart' : 'Out of Stock'}
+          {(!product.in_stock || product.stock === 0) ? 'Out of Stock' : 'Add to Cart'}
           <ShoppingCart className="btn-icon" />
         </button>
       </div>

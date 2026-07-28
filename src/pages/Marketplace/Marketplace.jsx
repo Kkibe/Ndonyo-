@@ -136,7 +136,7 @@ export default function Marketplace() {
     <div className="marketplace">
       <div className="marketplace-header">
         <div className="header-content">
-          <h1>⚡ PowerKing Store</h1>
+          <h1>Ndonyo Marketplace</h1>
           <p>Premium football gear, apparel, and accessories</p>
         </div>
         <div className="cart-icon" onClick={() => navigate('/cart')}>
@@ -162,6 +162,12 @@ export default function Marketplace() {
         </div>
         
         <div className={`filters-panel ${showFilters ? 'show' : ''}`}>
+          <div className="filters-panel-header">
+            <h3>Filters</h3>
+            <button className="filters-close-btn" onClick={() => setShowFilters(false)}>
+              <Close />
+            </button>
+          </div>
           <div className="filter-section">
             <label>Categories</label>
             <div className="category-chips" ref={categoryScrollRef}>
@@ -207,6 +213,10 @@ export default function Marketplace() {
               ))}
             </div>
           </div>
+          
+          <button className="apply-filters-btn" onClick={() => setShowFilters(false)}>
+            Show Products
+          </button>
           
           <button className="clear-filters" onClick={clearFilters}>
             <Close /> Clear All Filters

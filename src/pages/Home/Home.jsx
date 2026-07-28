@@ -7,7 +7,7 @@ import ProductCard from '../../components/ProductCard/ProductCard';
 import Loader from '../../components/Loader/Loader';
 import {
   ShoppingBag, LocalShipping, Security, Headset,
-  TrendingUp, Star, ArrowForward,
+  TrendingUp, Star, ArrowForward, ChevronLeft, ChevronRight,
 } from '@mui/icons-material';
 import './Home.scss';
 
@@ -20,32 +20,30 @@ const CATEGORIES = [
   { id: 'fan_gear', name: 'Fan Gear', icon: '🏆', color: '#007a37' },
 ];
 
-const FEATURES = [
-  { icon: <LocalShipping />, title: 'Fast Delivery', text: 'Free shipping on orders over KSH 5,000 across Kenya.' },
-  { icon: <Security />, title: 'Secure Payments', text: 'Pay safely with M-Pesa, card, or cash on delivery.' },
-  { icon: <ShoppingBag />, title: 'Quality Products', text: 'Curated gear from trusted sellers and top brands.' },
-  { icon: <Headset />, title: '24/7 Support', text: 'Our team is here to help whenever you need it.' },
-];
-
 export default function Home() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const [featured, setFeatured] = useState([]);
+  const [editorsChoice, setEditorsChoice] = useState([]);
   const [newArrivals, setNewArrivals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const scrollRef = React.useRef(null);
 
   const fetchHomeProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const [featRes, newRes] = await Promise.all([
+      const [featRes, editorsRes, newRes] = await Promise.all([
         productService.getFeaturedProducts(8),
+        productService.getProducts(1, 10, { sortBy: 'rating', sortOrder: 'desc' }),
         productService.getProducts(1, 8, { sortBy: 'createdAt', sortOrder: 'desc' }),
       ]);
-      setFeatured(featRes.products || []);
+      setFeatured(featRes || []);
+      setEditorsChoice(editorsRes.products || []);
       setNewArrivals(newRes.products || []);
     } catch (error) {
       console.error('Error fetching home products:', error);
       setFeatured([]);
+      setEditorsChoice([]);
       setNewArrivals([]);
     } finally {
       setLoading(false);
@@ -55,6 +53,18 @@ export default function Home() {
   useEffect(() => {
     fetchHomeProducts();
   }, [fetchHomeProducts]);
+
+  const scrollLeft = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: 300, behavior: 'smooth' });
+    }
+  };
 
   return (
     <div className="home-page">
@@ -78,23 +88,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Features */}
-      <section className="why-choose-us">
-        <div className="section-header">
-          <h2>Why Shop With Us</h2>
-          <p>Everything you need for a great shopping experience</p>
-        </div>
-        <div className="features-grid">
-          {FEATURES.map((f) => (
-            <div className="feature" key={f.title}>
-              <div className="feature-icon">{f.icon}</div>
-              <h3>{f.title}</h3>
-              <p>{f.text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* Categories */}
       <section className="categories-section">
         <div className="section-header">
@@ -115,6 +108,42 @@ export default function Home() {
             </NavLink>
           ))}
         </div>
+      </section>
+
+      {/* Editor's Choice — Horizontal scrolling products */}
+      <section className="editors-choice-section">
+        <div className="section-header">
+          <h2>Editor's Choice</h2>
+          <p>Top-rated picks our team loves</p>
+          <div className="scroll-controls">
+            <button className="scroll-btn" onClick={scrollLeft} aria-label="Scroll left">
+              <ChevronLeft />
+            </button>
+            <button className="scroll-btn" onClick={scrollRight} aria-label="Scroll right">
+              <ChevronRight />
+            </button>
+          </div>
+        </div>
+        {loading ? (
+          <div className="loading-skeleton">
+            {[...Array(8)].map((_, i) => (
+              <div className="product-skeleton" key={i}></div>
+            ))}
+          </div>
+        ) : editorsChoice.length > 0 ? (
+          <div className="horizontal-scroll" ref={scrollRef}>
+            {editorsChoice.map((p) => (
+              <div className="horizontal-card" key={p.id}>
+                <ProductCard product={p} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-home">
+            <Star style={{ fontSize: 48, color: 'var(--grey)' }} />
+            <p>No editor's choice products yet.</p>
+          </div>
+        )}
       </section>
 
       {/* Featured Products */}
